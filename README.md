@@ -1,10 +1,16 @@
 Table of Contents
 
-	•	Overview￼
-	•	Features￼
-	•	Screenshots-&-Demo￼
-	•	Prerequisites￼
-	•	Infrastructure (Terraform)
+- [Overview](#-overview)
+
+- [Features](#-features)
+
+- [Screenshots-&-Demo](#-Screenshots-&-Demo)
+
+- [Prerequisites](#-Prerequisites)
+
+- [Infrastructure (Terraform)](#-Infrastructure (Terraform))
+
+
   
 Overview
 
@@ -63,7 +69,7 @@ S3 Bucket
 
  Usage
  
-	 •	Access the application in your browser at: http://localhost:8000
+	 •	Access the application in  browser at: http://localhost:8000
 	 •	Deploy to AWS using EC2, Docker, RDS, S3, and IaC tools as described in the course structure.
 
  Claud Mentor:
