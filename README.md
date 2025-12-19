@@ -38,7 +38,7 @@ Prerequisites
 	•	Git installed
 	•	Python installed
 	•	PostgreSQL installed
-	•	Docker (optional but recommended)
+	•	Docker 
 
 
 Infrastructure (Terraform)
@@ -66,11 +66,48 @@ S3 Bucket
 
 	 •	S3 bucket for storing avatars: grocerymate-avatars-wasim2
 	 •	Public access fully blocked for security
+Table of Contents
+	•	Overview￼
+	•	Features￼
+	•	Screenshots-&-Demo￼
+	•	Prerequisites￼
+	•	Infrastructure (Terraform)￼
+
+Docker
+
+Build & Push Docker Image
+
+	•	Create a custom Dockerfile for the application
+	
+	•	Build the Docker image locally
+	
+	•	Push the image to your forked GitHub repository
+
+docker build -t grocery-app .
+
+Run Locally with Docker
+
+	•	Run the container on your local machine
+	
+	•	Connect to PostgreSQL using host.docker.internal
+
+docker run -p 5000:5000 \
+  -e DB_HOST=host.docker.internal \
+  grocery-app
+
+Deploy Docker Container on EC2
+
+	•	Install Docker on the EC2 instance
+	
+	•	Build or pull the Docker image
+	
+	•	Run the container on EC2
+
+docker run -d -p 80:5000 grocery-app
 
  Usage
  
-	 •	Access the application in  browser at: http://localhost:8000
+	 •	Access the application in  browser at: http://localhost:5000
 	 •	Deploy to AWS using EC2, Docker, RDS, S3, and IaC tools as described in the course structure.
 
- Claud Mentor:
-             Vlsis Loannidis .
+ 
