@@ -29,7 +29,8 @@ Features
 
 Screenshots & Demo
 
-  
+  <img width="1536" height="1024" alt="cloud" src="https://github.com/user-attachments/assets/9f65e14c-de04-4f53-b9ac-273c7d4ef0ee" />
+
 
 Prerequisites
 
