@@ -82,6 +82,38 @@ resource "aws_security_group" "wasim-ec2-sg" {
     Name    = "wasim-teraform-ec2-sg"
   }
 }
+resource "aws_iam_role" "grocery_ec2_role" {
+  name = "wasim-ec2-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Name    = "terraform-wasim-ec2-role"
+  }
+}
+resource "aws_iam_role_policy_attachment" "s3_full_access" {
+  role       = aws_iam_role.grocery_ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+}
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "terraform-iam-instance-ec2-profile"
+  role = aws_iam_role.grocery_ec2_role.name
+
+  tags = {
+    Name    = "terraform-iam-instance-ec2-profile"
+  }
+}
 # PUBLIC create EC2 instance
 resource "aws_instance" "ec2" {
       ami = "ami-0c7d68785ec07306c"
@@ -89,11 +121,10 @@ resource "aws_instance" "ec2" {
       subnet_id = aws_subnet.public_subnet.id
       vpc_security_group_ids = [aws_security_group.wasim-ec2-sg.id]
       associate_public_ip_address = true
-
+      iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
       tags = {
           Name = "EC2-for-RDS"
       }
-      # security_groups = [ aws_security_group.sg_for_ec2.id ]
 
 }
 
