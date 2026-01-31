@@ -1,47 +1,49 @@
 provider "aws" {
-  region = "eu-north-1"
+  region  = var.aws_region
+  profile = "default"
 }
 resource "aws_vpc" "my_vpc" {
-      cidr_block = "10.0.0.0/16"
-      tags = {
-          Name = "terraform-EC2-to-RDS-VPC"
-      }
+  cidr_block = "10.0.0.0/16"
+  tags = {
+    Name = "terraform-EC2-to-RDS-VPC"
+  }
 }
 resource "aws_internet_gateway" "ig_2tier" {
-    vpc_id = aws_vpc.my_vpc.id
-    tags = {
-      Name = "terraform-Internet Gateway for EC2-to-RDS VPC"
-    }
+  vpc_id = aws_vpc.my_vpc.id
+  tags = {
+    Name = "terraform-Internet Gateway for EC2-to-RDS VPC"
+  }
 }
 resource "aws_subnet" "public_subnet" {
-    vpc_id     = aws_vpc.my_vpc.id
-    availability_zone = "eu-north-1a"
-    cidr_block = "10.0.1.0/24"
-    tags = {
-      Name = "Public Subnet"
-    }
+  vpc_id            = aws_vpc.my_vpc.id
+  availability_zone = "eu-north-1a"
+  cidr_block        = "10.0.1.0/24"
+  tags = {
+    Name = "Public Subnet"
+  }
 }
 # PUBLIC ROUTE TABLE
-  # Create a Route Table for Public Subnets
+# Create a Route Table for Public Subnets
 resource "aws_route_table" "public_route_table" {
-    vpc_id = aws_vpc.my_vpc.id
-    route {
-      cidr_block = "0.0.0.0/0"  # This is the default route for internet-bound
-      gateway_id = aws_internet_gateway.ig_2tier.id
-    }
-    tags = {
-      Name = "public-route-table"
-    }
+  vpc_id = aws_vpc.my_vpc.id
+  route {
+    cidr_block = "0.0.0.0/0" # This is the default route for internet-bound
+    gateway_id = aws_internet_gateway.ig_2tier.id
+  }
+  tags = {
+    Name = "public-route-table"
+  }
 }
 
-  # PUBLIC
-  # Associate Public Subnets with Route Table
+
+# PUBLIC
+# Associate Public Subnets with Route Table
 resource "aws_route_table_association" "public-route-table-association" {
-    subnet_id      = aws_subnet.public_subnet.id
-    route_table_id = aws_route_table.public_route_table.id
+  subnet_id      = aws_subnet.public_subnet.id
+  route_table_id = aws_route_table.public_route_table.id
 }
 
-    # Security Group for EC2
+# Security Group for EC2
 resource "aws_security_group" "wasim-ec2-sg" {
   name        = "wasim-ec2-sg"
   description = "Security group for EC2 instance"
@@ -79,7 +81,7 @@ resource "aws_security_group" "wasim-ec2-sg" {
     description = "Allow all outbound traffic"
   }
   tags = {
-    Name    = "wasim-teraform-ec2-sg"
+    Name = "wasim-teraform-ec2-sg"
   }
 }
 resource "aws_iam_role" "grocery_ec2_role" {
@@ -99,7 +101,7 @@ resource "aws_iam_role" "grocery_ec2_role" {
   })
 
   tags = {
-    Name    = "terraform-wasim-ec2-role"
+    Name = "terraform-wasim-ec2-role"
   }
 }
 resource "aws_iam_role_policy_attachment" "s3_full_access" {
@@ -111,37 +113,60 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   role = aws_iam_role.grocery_ec2_role.name
 
   tags = {
-    Name    = "terraform-iam-instance-ec2-profile"
+    Name = "terraform-iam-instance-ec2-profile"
   }
+}
+resource "aws_sns_topic" "topic" {
+  name = "terraform-wasim-CPU_Utilization_alert"
+}
+resource "aws_sns_topic_subscription" "topic_email_subscription" {
+  topic_arn = aws_sns_topic.topic.arn
+  protocol  = "email"
+  endpoint  = var.email_address
 }
 # PUBLIC create EC2 instance
 resource "aws_instance" "ec2" {
-      ami = "ami-0c7d68785ec07306c"
-      instance_type = "t3.micro"
-      subnet_id = aws_subnet.public_subnet.id
-      vpc_security_group_ids = [aws_security_group.wasim-ec2-sg.id]
-      associate_public_ip_address = true
-      iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
-      tags = {
-          Name = "EC2-for-RDS"
-      }
-
+  ami                         = "ami-0c7d68785ec07306c"
+  instance_type               = "t3.micro"
+  subnet_id                   = aws_subnet.public_subnet.id
+  vpc_security_group_ids      = [aws_security_group.wasim-ec2-sg.id]
+  associate_public_ip_address = true
+  iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
+  tags = {
+    Name = "EC2-for-RDS"
+  }
 }
-
+resource "aws_cloudwatch_metric_alarm" "ec2_cpu_alarm" {
+  comparison_operator       = "GreaterThanOrEqualToThreshold"
+  evaluation_periods        = "2"
+  metric_name               = "CPUUtilization"
+  namespace                 = "AWS/EC2"
+  period                    = "60" #seconds
+  statistic                 = "Average"
+  threshold                 = "80"
+  alarm_description         = "This metric monitors ec2 cpu utilization"
+  treat_missing_data        = "notBreaching"
+  insufficient_data_actions = []
+  alarm_actions             = [aws_sns_topic.topic.arn]
+  alarm_name = "cpu-utilization-terraform-alarm"
+  dimensions = {
+    InstanceId = aws_instance.ec2.id
+  }
+}
 ##Private
-  # Private Subnets
+# Private Subnets
 resource "aws_subnet" "private_subnet_1" {
-  vpc_id     = aws_vpc.my_vpc.id
-  cidr_block = "10.0.2.0/24"
+  vpc_id            = aws_vpc.my_vpc.id
+  cidr_block        = "10.0.2.0/24"
   availability_zone = "eu-north-1b"
   tags = {
     Name = "Private Subnet-1"
   }
 }
-  ##Private
+##Private
 resource "aws_subnet" "private_subnet_2" {
-  vpc_id     = aws_vpc.my_vpc.id
-  cidr_block = "10.0.4.0/24"
+  vpc_id            = aws_vpc.my_vpc.id
+  cidr_block        = "10.0.4.0/24"
   availability_zone = "eu-north-1c"
   tags = {
     Name = "Private Subnet-2"
@@ -150,48 +175,48 @@ resource "aws_subnet" "private_subnet_2" {
 # COMBINE PRIVATE SUBNETS
 resource "aws_db_subnet_group" "rds_subnet_group" {
   name       = "my-db-subnet-group"
-  subnet_ids = [aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id ]  #if multi AZ add another subnet
+  subnet_ids = [aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id] #if multi AZ add another subnet
 }
 # PRIVATE
-  # SECURITY GROUPS & RDS
+# SECURITY GROUPS & RDS
 resource "aws_security_group" "sg_for_rds" {
-  name        = "my-db-sg"
+  name   = "my-db-sg"
   vpc_id = aws_vpc.my_vpc.id
   ingress {
-    from_port   = 5432  # Postgress port
-    to_port     = 5432
-    protocol    = "tcp"
+    from_port       = 5432 # Postgress port
+    to_port         = 5432
+    protocol        = "tcp"
     security_groups = [aws_security_group.wasim-ec2-sg.id]
   }
 }
 # PRIVATE ROUTE TABLE
-  #private route table without internet
+#private route table without internet
 resource "aws_route_table" "private_route_table" {
   vpc_id = aws_vpc.my_vpc.id
   tags = {
     Name = "private route_table"
   }
 }
-  #private subnet associated with the subnet
+#private subnet associated with the subnet
 resource "aws_route_table_association" "private-route-table-association" {
   subnet_id      = aws_subnet.private_subnet_1.id
   route_table_id = aws_route_table.private_route_table.id
-  }
+}
 resource "aws_route_table_association" "private-route-table-association-2" {
   subnet_id      = aws_subnet.private_subnet_2.id
   route_table_id = aws_route_table.private_route_table.id
-  }
+}
 resource "aws_db_instance" "my_db_instance" {
   allocated_storage    = 20
-  storage_type         = "gp2"     # check that the storage type is free tier eligible
+  storage_type         = "gp2" # check that the storage type is free tier eligible
   engine               = "postgres"
   engine_version       = "17.4"
-  instance_class       = "db.t3.micro"  #check that the instance class is free tier eligible
-  db_name              = "dbdatabase" #map the db name, username and password to your credentials
+  instance_class       = "db.t3.micro" #check that the instance class is free tier eligible
+  db_name              = "dbdatabase"  #map the db name, username and password to your credentials
   username             = "grocery_user"
   password             = "AbEd1184"
   db_subnet_group_name = aws_db_subnet_group.rds_subnet_group.name
-      # Attach the DB security group
+  # Attach the DB security group
   vpc_security_group_ids = [aws_security_group.wasim-ec2-sg.id]
   tags = {
     Name = "ec2_to_postgres_rds"
