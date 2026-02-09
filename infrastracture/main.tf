@@ -1,9 +1,9 @@
 provider "aws" {
   region  = var.aws_region
-  profile = "default"
+  profile = var.aws_profile
 }
 resource "aws_vpc" "my_vpc" {
-  cidr_block = "10.0.0.0/16"
+  cidr_block = var.vpc_cidr
   tags = {
     Name = "terraform-EC2-to-RDS-VPC"
   }
@@ -16,8 +16,8 @@ resource "aws_internet_gateway" "ig_2tier" {
 }
 resource "aws_subnet" "public_subnet" {
   vpc_id            = aws_vpc.my_vpc.id
-  availability_zone = "eu-north-1a"
-  cidr_block        = "10.0.1.0/24"
+  cidr_block        = var.public_subnet_cidr
+  availability_zone = var.availability_zone_public
   tags = {
     Name = "Public Subnet"
   }
@@ -126,12 +126,14 @@ resource "aws_sns_topic_subscription" "topic_email_subscription" {
 }
 # PUBLIC create EC2 instance
 resource "aws_instance" "ec2" {
-  ami                         = "ami-0c7d68785ec07306c"
-  instance_type               = "t3.micro"
+  ami                         = var.ec2_ami
+  instance_type               = var.ec2_instance_type
   subnet_id                   = aws_subnet.public_subnet.id
   vpc_security_group_ids      = [aws_security_group.wasim-ec2-sg.id]
   associate_public_ip_address = true
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
+  key_name                    = var.ec2_key_name
+
   tags = {
     Name = "EC2-for-RDS"
   }
@@ -157,8 +159,8 @@ resource "aws_cloudwatch_metric_alarm" "ec2_cpu_alarm" {
 # Private Subnets
 resource "aws_subnet" "private_subnet_1" {
   vpc_id            = aws_vpc.my_vpc.id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = "eu-north-1b"
+  cidr_block        = var.private_subnet_1_cidr
+  availability_zone = var.availability_zone_private_1
   tags = {
     Name = "Private Subnet-1"
   }
@@ -166,8 +168,8 @@ resource "aws_subnet" "private_subnet_1" {
 ##Private
 resource "aws_subnet" "private_subnet_2" {
   vpc_id            = aws_vpc.my_vpc.id
-  cidr_block        = "10.0.4.0/24"
-  availability_zone = "eu-north-1c"
+  cidr_block        = var.private_subnet_2_cidr
+  availability_zone = var.availability_zone_private_2
   tags = {
     Name = "Private Subnet-2"
   }
@@ -207,17 +209,18 @@ resource "aws_route_table_association" "private-route-table-association-2" {
   route_table_id = aws_route_table.private_route_table.id
 }
 resource "aws_db_instance" "my_db_instance" {
-  allocated_storage    = 20
-  storage_type         = "gp2" # check that the storage type is free tier eligible
-  engine               = "postgres"
-  engine_version       = "17.4"
-  instance_class       = "db.t3.micro" #check that the instance class is free tier eligible
-  db_name              = "dbdatabase"  #map the db name, username and password to your credentials
-  username             = "grocery_user"
-  password             = "AbEd1184"
-  db_subnet_group_name = aws_db_subnet_group.rds_subnet_group.name
+  allocated_storage      = 20
+  storage_type           = "gp2" # check that the storage type is free tier eligible
+  engine                 = var.db_engine
+  engine_version         = var.db_engine_version
+  instance_class         = var.db_instance_class #check that the instance class is free tier eligible
+  db_name                = var.db_name #map the db name, username and password to your credentials
+  username               = var.db_username
+  password               = var.db_password
+  db_subnet_group_name   = aws_db_subnet_group.rds_subnet_group.name
   # Attach the DB security group
-  vpc_security_group_ids = [aws_security_group.wasim-ec2-sg.id]
+  vpc_security_group_ids = [aws_security_group.sg_for_rds.id]
+
   tags = {
     Name = "ec2_to_postgres_rds"
   }
