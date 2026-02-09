@@ -7,6 +7,7 @@ variable "db_password" {
   description = "Your email address"
   type        = string
   default     = "dummy_password"
+  sensitive   = true
 }
 variable "aws_region" {
   description = "aws region"
@@ -69,15 +70,26 @@ variable "availability_zone_private_2" {
 }
 
 # RDS
+variable "db_storage_type" {
+  description = "database storage type"
+  type =string
+  default = "gp2"
+}
 variable "db_name" {
   description = "Database name"
   type        = string
+  default = "grocerymate_db"
 }
 
 variable "db_username" {
   description = "Database username"
   type        = string
-  sensitive   = true
+  default = "grocery_user"
+}
+variable "db_allocated_storage" {
+  description = "database allocated storage"
+  type = number
+  default = 20
 }
 
 variable "db_instance_class" {
