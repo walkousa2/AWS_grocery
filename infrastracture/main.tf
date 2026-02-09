@@ -209,8 +209,8 @@ resource "aws_route_table_association" "private-route-table-association-2" {
   route_table_id = aws_route_table.private_route_table.id
 }
 resource "aws_db_instance" "my_db_instance" {
-  allocated_storage      = 20
-  storage_type           = "gp2" # check that the storage type is free tier eligible
+  allocated_storage      = var.db_allocated_storage
+  storage_type           = var.db_storage_type # check that the storage type is free tier eligible
   engine                 = var.db_engine
   engine_version         = var.db_engine_version
   instance_class         = var.db_instance_class #check that the instance class is free tier eligible
